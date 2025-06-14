@@ -256,18 +256,13 @@ VALUES
 (NOW() - INTERVAL '9 days', NOW() + INTERVAL '7 days', 'Lomba', 2, 3, 2),
 (NOW(), NOW() + INTERVAL '7 days', 'Latihan Rutinan', 1, 1, 1),
 (NOW(), NOW() + INTERVAL '5 days', 'Pentas Seni', 1, 3, 1);
-select * from peminjaman
-select * from status_peminjaman
 
 -- Detail Peminjaman
 INSERT INTO detail_peminjaman (id_peminjaman, id_alat_kesenian)
 VALUES 
 (1, 3),
 (2, 2);
-select * from detail_peminjaman
-select * from alat_kesenian
-select * from peminjaman
-select * from status_alat_kesenian
+
 -- Denda Peminjam
 INSERT INTO denda_peminjam (denda, id_peminjam)
 VALUES 
@@ -294,12 +289,15 @@ INSERT INTO pengembalian (tanggal_pengembalian, id_peminjaman, id_kondisi_alat, 
 VALUES 
 (NOW(), 1, 1, 1, 1),
 (NOW(), 2, 2, 2, 2);
-select * from pengembalian
+
 -- Peraturan (ganti)
 INSERT INTO peraturan (id_admin, peraturan)
 VALUES 
-(1, 'Peraturan 1 tentang peminjaman'),
-(2, 'Peraturan 2 tentang pengembalian');
+(1, 'Diwajibkan untuk melengkapi data diri sebelum melakukan peminjaman alat'),
+(1, 'Bertanggung jawab penuh atas kerusakan/hilangnya alat dan wajib mengganti sesuai harga pasar'),
+(1, 'Sebelum dan sesudah peminjaman, kondisi alat akan diperiksa bersama untuk memastikan tidak ada kerusakan'),
+(2, 'Jika ada kegiatan resmi UKM, peminjaman pribadi dapat dibatalkan/dijawalkan ulang'),
+(2, 'Pelanggaran dapat mengakibatkan pemblokiran hak pinjam');
 
 -- select * from admin
 -- select * from peminjam
