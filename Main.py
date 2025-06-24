@@ -70,21 +70,30 @@ def Main():
             enter()
 
 def Login_admin():
+    idMimin = 0
     while True:
         clear()
         logo()
         Kon, Kur = KoneksiDB()
         username = input("Masukkan Username >> ")
         password = input("Masukkan Password >> ") 
-        query = f"SELECT * from admin where username_admin = '{username}' and password_admin = '{password}' "
-        Kur.execute(query,(username,password))
-        Pencocokan = Kur.fetchone()
-        if Pencocokan is not None:
-            Menu_admin()
-            Kon.close()
-            break
-        else:
-            print("Username Atau Password Salah!")
+        query = f"SELECT id_admin from admins where username = '{username}' and password = '{password}'"
+        try:
+            Kur.execute(query,(username,password))
+            Pencocokan = Kur.fetchone()
+
+            if Pencocokan is not None:
+                clear()
+                idMimin += Pencocokan[0]
+                time.sleep(1.5)
+                Menu_admin(idMimin)
+                Kon.close()
+                break
+            else:
+                print("Username Atau Password Salah!")
+                enter()
+        except Exception as e:
+            print(f"Terjadi Kesalahan : {e}")
             enter()
 
 def Login_user():
@@ -202,7 +211,7 @@ def Register():
         # values ('Tunggul', 'tunggul@gmail.com', 088888888123, 'tung',123, false )
         # """
 
-def Menu_admin():
+def Menu_admin(idMimin):
     while True:
         clear()
         logo()
@@ -215,25 +224,32 @@ def Menu_admin():
 5. Lihat User
 6. Konfirmasi
 """)
+        pagar()
         pilih = input("Silahkan Pilih >> ")
         match pilih:
             case '1':
-                KelolaAlat()
+                KelolaAlat(idMimin)
                 break
             case '2':
+                KelolaAturan(idMimin)
                 break
             case '3':
+                LihatAlatTerpinjamForAdmin(idMimin)
                 break
             case '4':
+                HisttoryForAdmin(idMimin)
                 break
             case '5':
+                LihatPeminjamForAdmin(idMimin)
                 break
             case '6':
+                KonfirmasiForAdmin(idMimin)
                 break
             case _:
                 print("Pilihan Tidak ada")
+                enter()
 
-def KelolaAlat():
+def KelolaAlat(idMimin):
     while True:
         clear()
         logo()
@@ -244,13 +260,29 @@ def KelolaAlat():
 2. Lihat Alat Kesenian
 3. Hapus Alat Kesenian
 4. Ubah Alat Kesenian
+5. Kembali
 """)
         pilih = input("Silahkan Pilih >> ")
         match pilih:
             case '1':
                 clear()
-                nama = input("Masukkan Nama Alat >> ")
-                deskripsi = input("Masukkan Deskripsi Alat >> ")
+                try:
+                    nama = input("Masukkan Nama Alat >> ")
+
+                    if not nama.strip():
+                        raise ValueError("Inputan Tidak Boleh Kosong!")
+                    print("Inputan Anda:", nama)
+                except ValueError as e:
+                    print("Terdapat Kesalahan Inputan:", e)
+
+                try:
+                    deskripsi = input("Masukkan Deskripsi Alat >> ")
+
+                    if not deskripsi.strip():
+                        raise ValueError("Inputan Tidak Boleh Kosong!")
+                    print("Inputan Anda:", deskripsi)
+                except ValueError as e:
+                    print("Terdapat Kesalahan Inputan:", e)
 
                 while True:
                     try:
@@ -264,20 +296,24 @@ def KelolaAlat():
                 while True:
                     try:
                         kondisi = int(input("Masukkan Kondisi Alat baik, kurang baik, atau rusak [1/2/3]"))
-                        if kondisi < 1 or kondisi > 2:
+                        if kondisi < 1 or kondisi > 3:
                             raise ValueError("Inputan Berupa [1/2/3]")
                         break
                     except ValueError:
                         print("Inputan Berupa [1/2/3]")
                 TambahAlat(nama, deskripsi,status,kondisi)
-                break
-
             case '2':
-                break
+                clear()
+                LihatAlatAdmin()
+                enter()
+
             case '3':
-                break
+                clear()
+                HapusAlat()
             case '4':
                 UpdateAlat()
+            case '5':
+                Menu_admin(idMimin)
                 break
             case _:
                 print("Pilihan Tidak ada")
@@ -289,31 +325,511 @@ def TambahAlat(nama, deskripsi,status,kondisi):
     Kur.execute(queryTambah,(nama, deskripsi,status,kondisi))
     Kon.commit()
     print("Alat Berhasil Ditambahkan!")
+    enter()
 
 
 def HapusAlat():
-    pass
-
-def UpdateAlat():
+    Kon, Kur = KoneksiDB()
     clear()
     logo()
-    LihatAlat()
+    LihatAlatAdmin()
+    try:
+        id = int(input("Masukkan ID Alat yang ingin dihapus >> "))
+        Kur.execute("SELECT COUNT(*) FROM alat_kesenian WHERE id_alat_kesenian = %s", (id,))
+        if Kur.fetchone()[0] == 0:
+            print("ID Alat tidak ditemukan.")
+        else:
+            Kur.execute("DELETE FROM alat_kesenian WHERE id_alat_kesenian = %s", (id,))
+            Kon.commit()
+            print("Alat berhasil dihapus.")
+    except Exception as e:
+        print(f"Terjadi kesalahan: {e}")
+    finally:
+        Kon.close()
+    enter()
 
-def LihatAlat():
+def UpdateAlat():
+    Kon, Kur = KoneksiDB()
+    clear()
+    logo()
+    LihatAlatAdmin()
+    try:
+        id = int(input("Masukkan ID Alat yang ingin diubah >> "))
+        Kur.execute("SELECT COUNT(*) FROM alat_kesenian WHERE id_alat_kesenian = %s", (id,))
+        if Kur.fetchone()[0] == 0:
+            print("ID Alat tidak ditemukan.")
+            enter()
+            return
+
+        nama = input("Masukkan Nama Baru >> ").strip()
+        deskripsi = input("Masukkan Deskripsi Baru >> ").strip()
+
+        while True:
+            try:
+                status = int(input("Masukkan Status [1: Tersedia, 2: Waiting, 3: Terpinjam] >> "))
+                if status < 1 or status > 3:
+                    raise ValueError
+                break
+            except:
+                print("Masukkan nilai antara 1 hingga 3.")
+
+        while True:
+            try:
+                kondisi = int(input("Masukkan Kondisi [1: Baik, 2: Kurang Baik, 3: Rusak] >> "))
+                if kondisi < 1 or kondisi > 3:
+                    raise ValueError
+                break
+            except:
+                print("Masukkan nilai antara 1 hingga 3.")
+
+        Kur.execute("""
+            UPDATE alat_kesenian 
+            SET nama_alat = %s, deskripsi = %s, id_status_alat = %s, id_kondisi_alat = %s 
+            WHERE id_alat_kesenian = %s
+        """, (nama, deskripsi, status, kondisi, id))
+        Kon.commit()
+        print("Alat berhasil diperbarui.")
+    except Exception as e:
+        print(f"Terjadi kesalahan: {e}")
+    finally:
+        Kon.close()
+    enter()
+
+
+def LihatAlatAdmin():
     Kon, Kur = KoneksiDB()
     query = "SELECT * from alat_kesenian"
     try: 
         Kur.execute(query)
         alat_list = Kur.fetchall()
-        print(tabulate(alat_list, headers=["ID", "Nama Alat", "Deskripsi", "Status", "Kondisi"], tablefmt="pretty"))
+        print(tabulate(alat_list, headers=["ID", "Nama Alat", "Deskripsi", "Status", "Kondisi"], tablefmt="fancy_outline"))
     except Exception as e:
         print(f"Database Gagal: {e}")
     finally:
         Kon.close()
 
+def KelolaAturan(idMimin):
+    while True:
+        clear()
+        logo()
+        print("KELOLAT Peraturan KESENIAN REOG")
+        print("Selamat Datang Di Menu Admin")
+        print("""
+1. Tambah Peraturan
+2. Hapus Peraturan
+3. Ubah Peraturan
+4. Lihat Peraturan
+5. Kembali
+""")
+        pilih = input("Silahkan Pilih >> ")
+        match pilih:
+            case '1':
+                Tambah_peraturan(idMimin)
+            case '2':
+                Hapus_peraturan()
+            case '3':
+                Update_Peraturan(idMimin)
+            case '4':
+                LihatPeraturan()
+                enter()
+            case '5':
+                Menu_admin(idMimin)
+                break
+            case _:
+                print("Pilihan Tidak ada")
+                enter() 
+
+def Tambah_peraturan(idMimin):
+    kon, kur = KoneksiDB()
+    try:
+        peraturan = input("Masukkan peraturan baru: ")
+        kur.execute("INSERT INTO peraturan (id_admin, peraturan) VALUES (%s, %s)", (idMimin, peraturan))
+        kon.commit()
+        print("Peraturan ditambah.")
+    except Exception as e:
+        print(f"Terjadi kesalahan: {e}")
+    finally:
+        kon.close()
+    input("Tekan Enter")
+
+def Hapus_peraturan():
+    Kon, Kur = KoneksiDB()
+    clear()
+    logo()
+    LihatPeraturan()
+    try:
+        id = int(input("Masukkan ID Alat yang ingin dihapus >> "))
+        Kur.execute("SELECT COUNT(*) FROM peraturan WHERE id_peraturan = %s", (id,))
+        if Kur.fetchone()[0] == 0:
+            print("ID Alat tidak ditemukan.")
+        else:
+            Kur.execute("DELETE FROM peraturan WHERE id_peraturan = %s", (id,))
+            Kon.commit()
+            print("Peraturan berhasil dihapus.")
+    except Exception as e:
+        print(f"Terjadi kesalahan: {e}")
+    finally:
+        Kon.close()
+    enter()
+
+def Update_Peraturan(idMimin):
+    Kon, Kur = KoneksiDB()
+    clear()
+    logo()
+    LihatPeraturan()
+    try:
+        id_peraturan = int(input("Masukkan ID Peraturan yang ingin diubah >> "))
+
+        Kur.execute("SELECT COUNT(*) FROM peraturan WHERE id_peraturan = %s AND id_admin = %s", (id_peraturan, idMimin))
+        if Kur.fetchone()[0] == 0:
+            print("ID tidak ditemukan atau bukan milik Anda.")
+            enter()
+
+        peraturan_baru = input("Masukkan isi peraturan baru >> ").strip()
+        if not peraturan_baru:
+            print("Isi peraturan tidak boleh kosong.")
+            enter()
+        
+        Kur.execute("UPDATE peraturan SET peraturan = %s WHERE id_peraturan = %s", (peraturan_baru, id_peraturan))
+        Kon.commit()
+        print("Peraturan berhasil diperbarui.")
+
+    except Exception as e:
+        print(f"Terjadi kesalahan: {e}")
+    finally:
+        Kon.close()
+        enter()
 
 
+def LihatPeraturan():
+    kon, kur = KoneksiDB()
+    try:
+        kur.execute("""
+            SELECT id_peraturan,peraturan
+            FROM peraturan p
+            ORDER BY id_peraturan
+        """)
+        data = kur.fetchall()
+        if data:
+            print(tabulate(data, headers=["No", "Peraturan"], tablefmt="fancy_outline"))
+        else:
+            print("Belum ada peraturan.")
+    except Exception as e:
+        print(f"Terjadi kesalahan: {e}")
+    finally:
+        kon.close() 
 
+
+def LihatAlatTerpinjamForAdmin(idMimin):
+    kon, kur = KoneksiDB()
+    try:
+        kur.execute("""
+        SELECT ak.id_alat_kesenian, ak.nama_alat, ak.deskripsi, ka.kondisi_alat, sak.status_alat 
+        FROM alat_kesenian ak
+        JOIN status_alat_kesenian sak ON ak.id_status_alat = sak.id_status_alat
+        JOIN kondisi_alat ka ON ak.id_kondisi_alat = ka.id_kondisi_alat 
+        WHERE sak.status_alat = 'Terpinjam'
+        ORDER BY ak.id_alat_kesenian
+        """)
+        alat = kur.fetchall()
+        if not alat:
+            pagar()
+            print("Tidak Ada Alat Yang Sedang Terpinjam".center(60))
+            pagar()
+            enter()
+            Menu_admin(idMimin)
+        print(tabulate(alat, headers=["ID", "Nama Alat", "Deskripsi", " Kondisi", "Status"], tablefmt="fancy_outline"))
+        enter()
+        Menu_admin(idMimin)
+    except Exception as e:
+        print(f"Terjadi kesalahan: {e}")
+
+def HisttoryForAdmin(idMimin):
+    while True:
+        clear()
+        logo()
+        print("""
+1. History Peminjaman
+2. History Pengembalian
+3. Kembali Ke Menu
+""")
+        pagar()
+        pilih = input("Silahkan Pilih >> ")
+        match pilih:
+            case '1':
+                HistoryPeminjamanForAdmin(idMimin)
+                break
+            case '2':
+                HistoryPengembalianForAdmin(idMimin)
+                break
+            case '3':
+                Menu_admin(idMimin)
+                break
+            case _:
+                print("Pilihan Tidak ada")
+                enter()
+
+def HistoryPeminjamanForAdmin(idMimin):
+    kon, kur = KoneksiDB()
+    try:
+        kur.execute(f"""
+        SELECT pn.id_peminjaman, pn.tanggal_peminjaman, pn.tenggat_pengembalian,p.nama_peminjam, ak.nama_alat, spn.status_peminjaman
+        FROM alat_kesenian ak
+        JOIN status_alat_kesenian sak ON ak.id_status_alat = sak.id_status_alat
+        JOIN kondisi_alat ka ON ak.id_kondisi_alat = ka.id_kondisi_alat
+        JOIN detail_peminjaman dp using(id_alat_kesenian)
+        JOIN peminjaman pn using (id_peminjaman)
+        JOIN status_peminjaman spn using(id_status_peminjaman)
+        JOIN peminjam p using (id_peminjam)
+        order by pn.id_peminjaman desc
+        """)
+        Peminjaman = kur.fetchall()
+        if not Peminjaman:
+            print("Anda Belum Pernah Melakukan Peminjaman")
+            enter()
+            HisttoryForAdmin(idMimin)
+        print(tabulate(Peminjaman, headers=["ID Peminjaman", "Tanggal Peminjaman", "Tenggat Peminjaman", "Peminjam", "Alat", "Status Peminjaman"], tablefmt="fancy_outline"))
+        enter()
+        HisttoryForAdmin(idMimin)
+    except Exception as e:
+        print(f"Terjadi kesalahan: {e}")
+
+def HistoryPengembalianForAdmin(idMimin):
+    kon, kur = KoneksiDB()
+    try:
+        kur.execute(f"""
+        select pg.id_pengembalian, pg.id_peminjaman,pn.tanggal_peminjaman, pn.tenggat_pengembalian, pg.tanggal_pengembalian, ka.kondisi_alat, sp.status_pengembalian, jp.jenis_pelanggaran, JP.denda 
+        from pengembalian pg
+        JOIN peminjaman pn using (id_peminjaman)
+        JOIN kondisi_alat ka using(id_kondisi_alat)
+        JOIN status_pengembalian sp using (id_status_pengembalian)
+        JOIN jenis_pelanggaran jp using (id_jenis_pelanggaran)
+        ORDER BY pg.id_pengembalian desc
+        """)
+        pengembalian = kur.fetchall()
+        if not pengembalian:
+            print("Anda Belum Pernah Melakukan Pengembalian")
+            enter()
+            HisttoryForAdmin(idMimin)
+        print(tabulate(pengembalian, headers=["ID Pengembalian", "ID Peminjaman","Tanggal Peminjaman", "Tenggat Pengembalian", "Tanggal Pengembalian", "Kondisi ", "Status Pengembalian", "Keterangan", "Denda"], tablefmt="fancy_outline"))
+        enter()
+        HisttoryForAdmin(idMimin)
+    except Exception as e:
+        print(f"Terjadi kesalahan: {e}")
+
+def LihatPeminjamForAdmin(idMimin):
+    kon, kur = KoneksiDB()
+    try:
+        kur.execute(f"""
+        select id_peminjam,nama_peminjam,email,nomor_telepon 
+        from peminjam
+        """)
+        peminjam = kur.fetchall()
+        if not peminjam:
+            print("Belum Ada Peminjam Yang Terdaftar")
+            enter()
+            Menu_admin(idMimin)
+        print(tabulate(peminjam, headers=["ID Peminjam", "Nama","email", "Nomor Telepon"], tablefmt="fancy_outline"))
+        enter()
+        Menu_admin(idMimin)
+    except Exception as e:
+        print(f"Terjadi kesalahan: {e}")
+
+def KonfirmasiForAdmin(idMimin):
+     while True:
+        clear()
+        logo()
+        print("""
+1. Konfirmasi Peminjaman
+2. Konfirmasi Pengembalian
+3. Kembali Ke Menu
+""")
+        pagar()
+        pilih = input("Silahkan Pilih >> ")
+        match pilih:
+            case '1':
+                KonfirmasiPeminjamanForAdmin(idMimin)
+                break
+            case '2':
+                KonfirmasiPengembalianForAdmin(idMimin)
+                break
+            case '3':
+                Menu_admin(idMimin)
+                break
+            case _:
+                print("Pilihan Tidak ada")
+                enter()
+
+def KonfirmasiPeminjamanForAdmin(idMimin):
+    kon, kur = KoneksiDB()
+    try:
+        kur.execute(f"""
+        SELECT pn.id_peminjaman, pn.tanggal_peminjaman, pn.tenggat_pengembalian,p.nama_peminjam, pn.keterangan,ak.nama_alat, spn.status_peminjaman
+        FROM alat_kesenian ak
+        JOIN status_alat_kesenian sak ON ak.id_status_alat = sak.id_status_alat
+        JOIN kondisi_alat ka ON ak.id_kondisi_alat = ka.id_kondisi_alat
+        JOIN detail_peminjaman dp using(id_alat_kesenian)
+        JOIN peminjaman pn using (id_peminjaman)
+        JOIN status_peminjaman spn using(id_status_peminjaman)
+        JOIN peminjam p using (id_peminjam)
+        WHERE pn.id_status_peminjaman = 1
+        ORDER by pn.id_peminjaman
+        """)
+        Peminjaman = kur.fetchall()
+        if not Peminjaman:
+            print("Anda Belum Pernah Melakukan Peminjaman")
+            enter()
+            KonfirmasiForAdmin(idMimin)
+        print(tabulate(Peminjaman, headers=["ID Peminjaman", "Tanggal Peminjaman", "Tenggat Peminjaman", "Peminjam","Keterangan", "Alat", "Status Peminjaman"], tablefmt="fancy_outline"))
+        tampunganIdPeminjaman = [] 
+        for value in Peminjaman:
+            tampunganIdPeminjaman.append(value[0])
+            
+        while True :
+            try:
+                idPeminjaman = int(input("Masukkan ID Peminjaman Yang ingin di konfirmasi >> "))
+                if idPeminjaman not in tampunganIdPeminjaman : 
+                    raise ValueError ("Id Peminjaman Tidak Tersedia")
+                else :
+                    break
+            except Exception as e :
+                print (f"terjadi error : {e}")
+                enter()
+        print ("""
+Konfirmasi Untuk :
+1.Dipinjamkan
+2.Tidak Dipinjamkan
+""")
+        while True :
+            pilih = input("Konfirmasi Untuk >> ")
+            match pilih:
+                case "1":
+                    KonfirmasiUntukDipinjamkan(idPeminjaman)
+                    KonfirmasiForAdmin(idMimin)
+                    break
+                case "2":
+                    KonfirmasiTidakDipinjamkan(idPeminjaman)
+                    KonfirmasiForAdmin(idMimin)
+                case _ :
+                    print("Silahkan Pilih Opsi Yang benar")
+                    enter()        
+    except Exception as e:
+        print(f"Terjadi kesalahan: {e}")
+
+def KonfirmasiUntukDipinjamkan(idPeminjaman):
+    kon,kur = KoneksiDB()
+    try:
+        kur.execute(f"select id_alat_kesenian from detail_peminjaman where id_peminjaman = {idPeminjaman}")
+        idAlat = kur.fetchall()
+        kur.execute(f"update peminjaman set id_status_peminjaman = 2 where id_peminjaman = {idPeminjaman}")
+        kur.execute(f"UPDATE alat_kesenian SET id_status_alat = 2 WHERE id_alat_kesenian = {idAlat[0][0]}")
+        kon.commit()
+        print("Konfirmasi Telah Berhasil")
+        enter()
+    except Exception as e :
+        print(f"Terjadi kesalahan: {e}")
+        enter()
+
+def KonfirmasiTidakDipinjamkan(idPeminjaman):
+    kon,kur = KoneksiDB()
+    try:
+        kur.execute(f"update peminjaman set id_status_peminjaman = 3 where id_peminjaman = {idPeminjaman}")
+        kon.commit()
+        print("Konfirmasi Telah Berhasil")
+        enter()
+    except Exception as e :
+        print(f"Terjadi kesalahan: {e}")
+        enter()
+    
+
+def KonfirmasiPengembalianForAdmin(idMimin):
+    kon, kur = KoneksiDB()
+    try:
+        kur.execute(f"""
+        select pg.id_pengembalian, pg.id_peminjaman,pn.tanggal_peminjaman, pn.tenggat_pengembalian, pg.tanggal_pengembalian, ka.kondisi_alat, sp.status_pengembalian, jp.jenis_pelanggaran, JP.denda 
+        from pengembalian pg
+        JOIN peminjaman pn using (id_peminjaman)
+        JOIN kondisi_alat ka using(id_kondisi_alat)
+        JOIN status_pengembalian sp using (id_status_pengembalian)
+        JOIN jenis_pelanggaran jp using (id_jenis_pelanggaran)
+		WHERE pg.id_status_pengembalian = 1
+        ORDER BY pg.id_pengembalian 
+        """)
+        pengembalian = kur.fetchall()
+        if not pengembalian:
+            print("Anda Belum Pernah Melakukan Pengembalian")
+            enter()
+            HisttoryForAdmin()
+        print(tabulate(pengembalian, headers=["ID Pengembalian", "ID Peminjaman","Tanggal Peminjaman", "Tenggat Pengembalian", "Tanggal Pengembalian", "Kondisi ", "Status Pengembalian", "Keterangan", "Denda"], tablefmt="fancy_outline"))
+        tampunganIdPengembalian = [] 
+        for value in pengembalian:
+            tampunganIdPengembalian.append(value[0])
+            
+        while True :
+            try:
+                idPengembalian = int(input("Masukkan ID Peminjaman Yang ingin di konfirmasi >> "))
+                if idPengembalian not in tampunganIdPengembalian : 
+                    raise ValueError ("Id Peminjaman Tidak Tersedia")
+                else :
+                    break
+            except Exception as e :
+                print (f"terjadi error : {e}")
+                enter()
+    
+        print ("""
+    Kondisi :
+            1. Bagus
+            2. Kurang Baik
+            3. Rusak
+    """)
+        
+        while True :
+                try:                
+                    kondisi = int(input("Kondisi Alat >> "))
+                    if kondisi > 0 and kondisi < 4:
+                        break
+                    else:
+                        raise ValueError ("Silahkan Pilih Opsi Yang Benar")
+                except Exception as e :
+                    print(f"Terjadi kesalahan: {e}")
+                    enter()
+
+        keterangan = 0
+        kur.execute(f"""
+        select pn.tenggat_pengembalian, pg.tanggal_pengembalian
+        from pengembalian pg
+        JOIN peminjaman pn using (id_peminjaman)
+        WHERE pg.id_status_pengembalian = 1 and pg.id_pengembalian = {idPengembalian}
+        """)
+        dataTanggal = kur.fetchall()
+        batasPengembalian = dataTanggal[0][0]
+        tanggalPengembalian = dataTanggal[0][1]
+
+        terlambatKembali = False
+        if tanggalPengembalian > batasPengembalian:
+            terlambatKembali = True
+        
+        if terlambatKembali == True and kondisi ==3:
+            keterangan += 3
+        elif terlambatKembali == True :
+            keterangan += 1
+        elif kondisi == 3:
+            keterangan += 2
+        else :
+            keterangan += 5
+
+        kur.execute(f"""
+        update pengembalian set id_kondisi_alat = {kondisi}, id_jenis_pelanggaran = {keterangan}, id_status_pengembalian = 2 where id_pengembalian = {idPengembalian}
+        """)
+        # kur.execute()
+        kon.commit()
+        print("Pengembalian Berhasil Dikonfirmasi")
+        enter()
+        Menu_admin(idMimin)
+
+    except Exception as e :
+        print(f"Terjadi kesalahan: {e}")
+        enter()
 
 
 #Role : Peminjam
@@ -538,8 +1054,7 @@ def pinjam_alat(idPeminjam):
         # Insert ke detail_peminjaman
         kur.execute("INSERT INTO detail_peminjaman (id_peminjaman, id_alat_kesenian) VALUES (%s, %s)", (id_peminjaman, id_alat))
 
-        # Update status alat menjadi 'Terpinjam'
-        kur.execute("UPDATE alat_kesenian SET id_status_alat = 2 WHERE id_alat_kesenian = %s", (id_alat,))
+       
 
         kon.commit()
         print("Peminjaman berhasil dilakukan, silahkan menunggu admin untuk mengkonfirmasi")
@@ -713,6 +1228,7 @@ def HistoryPengembalianForPeminjam(idPeminjam):
 if __name__ == "__main__":
     # Main()
     # saldoDenda(idPeminjam=1)
-    menu_peminjam(idPeminjam=1)
+    # menu_peminjam(idPeminjam=1)
     # UpdateAlat()
-    # Menu_admin()
+    Menu_admin(idMimin=1)
+    # LihatAlatTerpinjamForAdmin()
