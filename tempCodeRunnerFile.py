@@ -1,0 +1,1 @@
+  UPDATE denda_peminjam set denda = 0 where id_peminjam = {idPeminjam}
